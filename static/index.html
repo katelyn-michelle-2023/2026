@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura — Your AI Stylist Bestie</title>
+  <!-- Knot Web SDK -->
+  <script src="https://unpkg.com/knotapi-js@next"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --pink: #f5a8c9;
+        --lilac: #d4b8e0;
+        --cream: #fdf6f0;
+        --dark: #1a1a1a;
+        --mid: #555;
+        --green: #16a34a;
+      --red: #b91c1c;
+      --radius: 16px;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background: var(--cream);
+        color: var(--dark);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem 4rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      header h1 {
+        font-size: 2.8rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #e879a0, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      header p {
+        color: var(--mid);
+        font-size: 1rem;
+        margin-top: 0.4rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+        width: 100%;
+        max-width: 640px;
+        margin-bottom: 1.5rem;
+      }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--mid);
+      margin-bottom: 1rem;
+    }
+
+    /* Knot connect section */
+    #knot-section .knot-status {
+      font-size: 0.9rem;
+      color: var(--mid);
+      margin-bottom: 0.75rem;
+    }
+
+    #knot-section .knot-status.connected {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+      /* Camera */
+      #camera-preview {
+        width: 100%;
+        border-radius: 12px;
+        background: #000;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+      }
+
+      #photo-canvas {
+        display: none;
+      }
+
+      #photo-preview {
+        width: 100%;
+        border-radius: 12px;
+        display: none;
+        margin-top: 0.75rem;
+        border: 2px solid var(--pink);
+      }
+
+      /* Voice */
+      #waveform-bar {
+        height: 4px;
+        background: #eee;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.75rem 0;
+      }
+
+      #waveform-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #e879a0, #a855f7);
+        transition: width 0.1s;
+      }
+
+      #rec-timer {
+        font-size: 0.85rem;
+        color: var(--mid);
+        margin-bottom: 0.75rem;
+        min-height: 1.2em;
+      }
+
+      /* Buttons */
+      .btn-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      button {
+        padding: 0.6rem 1.2rem;
+        border-radius: 999px;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          opacity 0.15s,
+          transform 0.1s;
+      }
+
+      button:active {
+        transform: scale(0.96);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #e879a0, #a855f7);
+        color: white;
+      }
+
+      .btn-secondary {
+        background: #f0f0f0;
+        color: var(--dark);
+      }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: var(--red);
+    }
+
+    .btn-success {
+      background: #dcfce7;
+      color: var(--green);
+    }
+
+      /* Send button */
+      #send-btn {
+        width: 100%;
+        max-width: 640px;
+        padding: 1rem;
+        font-size: 1.1rem;
+        border-radius: var(--radius);
+        background: linear-gradient(135deg, #e879a0, #a855f7);
+        color: white;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      #send-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* Status */
+      #status {
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--mid);
+        min-height: 1.4em;
+        margin: 0.75rem 0;
+      }
+
+      /* Audio playback */
+      #audio-section {
+        display: none;
+      }
+
+      #aura-audio {
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+      }
+
+      /* Picks grid */
+      #picks-section {
+        display: none;
+      }
+
+      .picks-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+    .pick-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #eee;
+      transition: transform 0.2s;
+      position: relative;
+    }
+
+      .pick-card:hover {
+        transform: translateY(-4px);
+      }
+
+      .pick-card img {
+        width: 100%;
+        aspect-ratio: 3/4;
+        object-fit: cover;
+      }
+
+    .pick-card-body { padding: 0.75rem; }
+
+      .pick-card-body .pick-name {
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+      }
+
+      .pick-card-body .pick-brand {
+        font-size: 0.75rem;
+        color: var(--mid);
+      }
+
+      .pick-card-body .pick-price {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #a855f7;
+        margin: 0.3rem 0;
+      }
+
+      .pick-card-body a {
+        font-size: 0.75rem;
+        color: #e879a0;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+    .pick-justification {
+      font-size: 0.8rem;
+      color: var(--mid);
+      margin-top: 0.4rem;
+      font-style: italic;
+      line-height: 1.4;
+    }
+
+    .purchase-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--green);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+    }
+
+    .purchase-badge.pending {
+      background: #f59e0b;
+    }
+
+    .purchase-badge.failed {
+      background: var(--red);
+    }
+
+    /* ── Inline Purchase Section ──────────────────────────────────────────── */
+    .purchase-desc {
+      font-size: 0.9rem;
+      color: var(--mid);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .purchase-list {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+
+    .purchase-list li {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .purchase-list li:last-child { border-bottom: none; }
+
+    .purchase-total {
+      font-weight: 700;
+      font-size: 1rem;
+      text-align: right;
+      margin-bottom: 0.5rem;
+      color: #a855f7;
+    }
+
+    #purchase-section .btn-row button { flex: 1; padding: 0.75rem; font-size: 1rem; }
+
+    /* ── Subscription Banner ──────────────────────────────────────────────── */
+    #sub-banner {
+      display: none;
+      width: 100%;
+      max-width: 640px;
+      background: white;
+      border-radius: var(--radius);
+      border-left: 4px solid #f59e0b;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      margin-bottom: 1.5rem;
+    }
+
+    #sub-banner h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .sub-item:last-child { border-bottom: none; }
+
+    .sub-item .sub-name { font-weight: 600; }
+
+    .sub-item .sub-cost { color: var(--mid); margin: 0 0.75rem; flex: 1; }
+
+    .sub-item button {
+      font-size: 0.78rem;
+      padding: 0.3rem 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>✦ Aura</h1>
+    <p>your AI stylist bestie. she will NOT hold back.</p>
+  </header>
+
+  <!-- ── Step 0: Connect accounts (Knot Link) ───────────────────────────── -->
+  <div class="card" id="knot-section">
+    <h2>🔗 Step 0 — Connect Your Accounts</h2>
+    <p class="knot-status" id="knot-status-text">
+      Connect your Amazon account so Aura can see your taste and cop items automatically.
+    </p>
+    <div class="btn-row">
+      <button class="btn-primary" id="knot-connect-btn">Connect Amazon</button>
+      <button class="btn-danger" id="knot-disconnect-btn" style="display:none">Disconnect</button>
+    </div>
+  </div>
+
+  <!-- ── Step 1: Camera ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>📸 Step 1 — Show Her What You're Working With</h2>
+    <video id="camera-preview" autoplay playsinline muted></video>
+    <canvas id="photo-canvas"></canvas>
+    <img id="photo-preview" alt="Captured photo" />
+    <div class="btn-row">
+      <button class="btn-primary" id="start-camera-btn">Start Camera</button>
+      <button class="btn-secondary" id="take-photo-btn" disabled>Take Photo</button>
+      <button class="btn-danger" id="retake-btn" style="display:none">Retake</button>
+    </div>
+  </div>
+
+    <!-- Voice / Text Section -->
+    <div class="card">
+      <h2>🎙 Step 2 — Tell Aura What You Need</h2>
+
+      <!-- Voice recording -->
+      <div id="rec-timer"></div>
+      <div id="waveform-bar"><div id="waveform-fill"></div></div>
+      <div class="btn-row">
+        <button class="btn-primary" id="rec-start-btn">
+          Record Voice Note
+        </button>
+        <button class="btn-danger" id="rec-stop-btn" disabled>Stop</button>
+      </div>
+      <audio
+        id="voice-playback"
+        controls
+        style="width: 100%; margin-top: 0.75rem; display: none"
+      ></audio>
+      <div
+        id="transcript-box"
+        style="
+          display: none;
+          margin-top: 0.6rem;
+          padding: 0.6rem 0.9rem;
+          background: #f9f0ff;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          color: #555;
+          font-style: italic;
+        "
+      ></div>
+
+      <!-- Text fallback -->
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+        "
+      >
+        <div style="flex: 1; height: 1px; background: #eee"></div>
+        <span style="font-size: 0.8rem; color: var(--mid); white-space: nowrap"
+          >or type instead</span
+        >
+        <div style="flex: 1; height: 1px; background: #eee"></div>
+      </div>
+      <textarea
+        id="text-input"
+        placeholder="e.g. I need a cute going-out top under $40, something Y2K..."
+        rows="3"
+        style="
+          width: 100%;
+          margin-top: 0.75rem;
+          padding: 0.7rem 0.9rem;
+          border-radius: 12px;
+          border: 1.5px solid #e0e0e0;
+          font-size: 0.95rem;
+          font-family: inherit;
+          resize: vertical;
+          outline: none;
+          transition: border-color 0.15s;
+        "
+      ></textarea>
+    </div>
+
+    <!-- Budget -->
+    <div class="card">
+      <h2>💸 Step 3 — Set a Budget (Optional)</h2>
+      <div style="display: flex; align-items: center; gap: 0.5rem">
+        <span style="font-size: 1.1rem; font-weight: 700; color: var(--mid)"
+          >$</span
+        >
+        <input
+          id="budget-input"
+          type="number"
+          min="0"
+          step="1"
+          placeholder="e.g. 200"
+          style="
+            flex: 1;
+            padding: 0.6rem 0.8rem;
+            border-radius: 999px;
+            border: 1.5px solid #e0e0e0;
+            font-size: 1rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.15s;
+          "
+        />
+        <span style="font-size: 0.85rem; color: var(--mid)">max</span>
+      </div>
+    </div>
+
+  <!-- ── Status + Send ──────────────────────────────────────────────────── -->
+  <div id="status"></div>
+  <button id="send-btn" disabled>✦ Ask Aura</button>
+
+  <!-- ── Subscription Banner (shown after response) ────────────────────── -->
+  <div id="sub-banner">
+    <h3>👀 Aura noticed something…</h3>
+    <div id="sub-list"></div>
+  </div>
+
+  <!-- ── Audio Response ─────────────────────────────────────────────────── -->
+  <div class="card" id="audio-section">
+    <h2>🔊 Aura's Take</h2>
+    <audio id="aura-audio" controls autoplay></audio>
+  </div>
+
+  <!-- ── Picks Grid ─────────────────────────────────────────────────────── -->
+  <div class="card" id="picks-section">
+    <h2>🛍 The Picks</h2>
+    <div class="picks-grid" id="picks-grid"></div>
+  </div>
+
+  <!-- ── Inline Purchase Section (shown after picks if Knot connected) ── -->
+  <div class="card" id="purchase-section" style="display:none">
+    <h2>🛒 Cop the Look</h2>
+    <p class="purchase-desc">Aura will place these orders on your Amazon account automatically. Real money, real clothes.</p>
+    <ul class="purchase-list" id="purchase-list"></ul>
+    <div class="purchase-total" id="purchase-total"></div>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn-primary" id="purchase-confirm-btn">✦ Yes, cop it all</button>
+      <button class="btn-secondary" id="purchase-skip-btn">Nah, just browse</button>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────
+    let photoBlob = null;
+    let audioBlob = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let cameraStream = null;
+    let recTimerInterval = null;
+    let recSeconds = 0;
+
+    // Knot state
+    let knotUserId = null;          // external_user_id — generated once, persisted in localStorage
+    let knotConnected = false;       // true after connecting
+
+    // Pending picks (for inline purchase section)
+    let pendingPicks = [];
+
+    // ── Element refs ──────────────────────────────────────────────────────
+    const knotSection       = document.getElementById('knot-section');
+    const knotStatusText    = document.getElementById('knot-status-text');
+    const knotConnectBtn    = document.getElementById('knot-connect-btn');
+    const knotDisconnectBtn = document.getElementById('knot-disconnect-btn');
+
+    const cameraPreview    = document.getElementById('camera-preview');
+    const photoCanvas      = document.getElementById('photo-canvas');
+    const photoPreview     = document.getElementById('photo-preview');
+    const startCameraBtn   = document.getElementById('start-camera-btn');
+    const takePhotoBtn     = document.getElementById('take-photo-btn');
+    const retakeBtn        = document.getElementById('retake-btn');
+    const recStartBtn      = document.getElementById('rec-start-btn');
+    const recStopBtn       = document.getElementById('rec-stop-btn');
+    const recTimer         = document.getElementById('rec-timer');
+    const waveformFill     = document.getElementById('waveform-fill');
+    const voicePlayback    = document.getElementById('voice-playback');
+    const sendBtn          = document.getElementById('send-btn');
+    const status           = document.getElementById('status');
+    const audioSection     = document.getElementById('audio-section');
+    const auraAudio        = document.getElementById('aura-audio');
+    const picksSection     = document.getElementById('picks-section');
+    const picksGrid        = document.getElementById('picks-grid');
+    const subBanner           = document.getElementById('sub-banner');
+    const subList             = document.getElementById('sub-list');
+    const purchaseSection     = document.getElementById('purchase-section');
+    const purchaseList        = document.getElementById('purchase-list');
+    const purchaseTotal       = document.getElementById('purchase-total');
+    const purchaseConfirmBtn  = document.getElementById('purchase-confirm-btn');
+    const purchaseSkipBtn     = document.getElementById('purchase-skip-btn');
+    const budgetInput = document.getElementById('budget-input');
+    const textInput = document.getElementById('text-input');
+    const transcriptBox = document.getElementById('transcript-box');
+
+    // ── Knot user ID (generate once, keep in localStorage) ───────────────
+    function getOrCreateUserId() {
+      let id = localStorage.getItem('aura_knot_user_id');
+      if (!id) {
+        id = 'aura-' + crypto.randomUUID();
+        localStorage.setItem('aura_knot_user_id', id);
+      }
+      return id;
+    }
+
+    // ── Knot: Connect Accounts ────────────────────────────────────────────
+    knotConnectBtn.addEventListener('click', () => {
+      setKnotConnected('aura-test-user-001');
+    });
+
+    function setKnotConnected(userId) {
+      knotUserId = userId;
+      knotConnected = true;
+      knotStatusText.textContent = '✅ Connected! Aura can see your purchase history.';
+      knotStatusText.className = 'knot-status connected';
+      knotConnectBtn.style.display = 'none';
+      knotDisconnectBtn.style.display = 'inline-block';
+      setStatus('Amazon connected — picks will be personalised to you 🛒');
+    }
+
+    knotDisconnectBtn.addEventListener('click', () => {
+      knotConnected = false;
+      knotDisconnectBtn.style.display = 'none';
+      knotConnectBtn.style.display = 'inline-block';
+      knotConnectBtn.disabled = false;
+      knotStatusText.textContent = 'Connect your Amazon account so Aura can see your taste and cop items automatically.';
+      knotStatusText.className = 'knot-status';
+      setStatus('Amazon disconnected — picks will be vibes-based only ✨');
+    });
+
+    // ── Camera ────────────────────────────────────────────────────────────
+    startCameraBtn.addEventListener('click', async () => {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        cameraPreview.srcObject = cameraStream;
+        takePhotoBtn.disabled = false;
+        startCameraBtn.disabled = true;
+        setStatus('Camera ready — strike a pose 📷');
+      } catch (err) {
+        setStatus('Camera access denied. Make sure you\'re on HTTPS or localhost.');
+        console.error(err);
+      }
+    });
+
+      takePhotoBtn.addEventListener("click", () => {
+      takePhotoBtn.disabled = true;
+      let count = 3;
+      setStatus(`📸 ${count}…`);
+      const countdown = setInterval(() => {
+        count--;
+        if (count > 0) {
+          setStatus(`📸 ${count}…`);
+        } else {
+          clearInterval(countdown);
+          setStatus('Smile! 😄');
+            photoCanvas.width = cameraPreview.videoWidth;
+            photoCanvas.height = cameraPreview.videoHeight;
+            photoCanvas.getContext("2d").drawImage(cameraPreview, 0, 0);
+            photoCanvas.toBlob(
+          (blob) => {
+                photoBlob = blob;
+                photoPreview.src = URL.createObjectURL(blob);
+                photoPreview.style.display = "block";
+                retakeBtn.style.display = "inline-block";
+                takePhotoBtn.style.display = "none";
+                    cameraStream.getTracks().forEach((t) => t.stop());
+                cameraPreview.style.display = "none";
+                checkReady();
+                setStatus("Photo locked in ✅");
+              },
+          "image/jpeg",
+          0.92,
+        );
+        }
+      }, 1000);
+      });
+
+      retakeBtn.addEventListener("click", async () => {
+        photoBlob = null;
+        photoPreview.style.display = "none";
+        photoPreview.src = "";
+        retakeBtn.style.display = "none";
+        takePhotoBtn.style.display = "inline-block";
+        cameraPreview.style.display = "block";
+        startCameraBtn.disabled = false;
+        takePhotoBtn.disabled = true;
+        checkReady();
+      });
+
+      // ── Voice Recording ────────────────────────────────────────────────────
+      recStartBtn.addEventListener("click", async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          recordedChunks = [];
+
+          const mimeType = MediaRecorder.isTypeSupported(
+            "audio/webm;codecs=opus",
+          )
+            ? "audio/webm;codecs=opus"
+            : "audio/webm";
+
+          mediaRecorder = new MediaRecorder(stream, { mimeType });
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+          };
+          mediaRecorder.onstop = () => {
+            audioBlob = new Blob(recordedChunks, { type: mimeType });
+            voicePlayback.src = URL.createObjectURL(audioBlob);
+            voicePlayback.style.display = "block";
+            stream.getTracks().forEach((t) => t.stop());
+            clearInterval(recTimerInterval);
+            waveformFill.style.width = "0%";
+            checkReady();
+            setStatus("Voice note saved 🎙");
+          };
+
+          mediaRecorder.start(100);
+          recStartBtn.disabled = true;
+          recStopBtn.disabled = false;
+          recSeconds = 0;
+          recTimer.textContent = "⏺ 0s";
+          recTimerInterval = setInterval(() => {
+            recSeconds++;
+            recTimer.textContent = `⏺ ${recSeconds}s`;
+            waveformFill.style.width = `${Math.min(100, recSeconds * 2)}%`;
+          }, 1000);
+          setStatus("Recording... talk to Aura like she's your bestie 💬");
+        } catch (err) {
+          setStatus("Mic access denied.");
+          console.error(err);
+        }
+      });
+
+      recStopBtn.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+          recStopBtn.disabled = true;
+          recStartBtn.disabled = false;
+        }
+      });
+
+      // ── Submit ─────────────────────────────────────────────────────────────
+      function checkReady() {
+        sendBtn.disabled = !(photoBlob || audioBlob || textInput.value.trim());
+      }
+
+      textInput.addEventListener("input", checkReady);
+
+      sendBtn.addEventListener('click', async () => {
+      if (checkReady()) return;
+
+      sendBtn.disabled = true;
+      setStatus('Sending to Aura… she\'s cooking 🍳');
+
+        const form = new FormData();
+        if (audioBlob) form.append("audio", audioBlob, "voice.webm");
+        if (photoBlob) form.append("image", photoBlob, "photo.jpg");
+      if (knotConnected && knotUserId) form.append('knot_token', knotUserId);
+        const typedText = textInput.value.trim();
+        if (typedText) form.append("text", typedText);
+        const budgetVal = budgetInput.value.trim();
+        if (budgetVal) form.append("max_budget", budgetVal);
+
+        try {
+          const res = await fetch("/chat", { method: "POST", body: form });
+          if (!res.ok) throw new Error(`Server error: ${res.status}`);
+          const data = await res.json();
+
+          // Show transcript
+          if (data.transcript) {
+            transcriptBox.textContent = `🎙 "${data.transcript}"`;
+            transcriptBox.style.display = "block";
+          }
+
+          // Play Aura's voice response
+          if (data.audio_url || data.audio_b64) {
+            audioSection.style.display = "block";
+            auraAudio.src = data.audio_url
+              ? data.audio_url
+              : `data:audio/mpeg;base64,${data.audio_b64}`;
+          }
+
+          // Render picks
+          if (data.picks && data.picks.length) {
+            picksSection.style.display = "block";
+            picksGrid.innerHTML = "";
+            data.picks.forEach((pick) => {
+              const card = document.createElement("div");
+              card.className = "pick-card";
+              card.innerHTML = `
+              <img src="${pick.image_url || ""}" alt="${pick.name}" loading="lazy" />
+              <div class="pick-card-body">
+                <div class="pick-name">${pick.name}</div>
+                <div class="pick-brand">${pick.brand || ""}</div>
+                <div class="pick-price">$${pick.price_usd}</div>
+                <a href="${pick.url}" target="_blank" rel="noopener">Shop →</a>
+                ${pick.justification ? `<div class="pick-justification">"${pick.justification}"</div>` : ""}
+              </div>
+            `;
+              picksGrid.appendChild(card);
+            });
+          }
+
+          setStatus("Aura has spoken. 💅");
+        } catch (err) {
+          setStatus(`Something went wrong: ${err.message}`);
+          console.error(err);
+          sendBtn.disabled = false;
+        }
+      });
+
+      // ── Pick card builder ─────────────────────────────────────────────────
+    function buildPickCard(pick, purchaseStatus) {
+      const card = document.createElement('div');
+      card.className = 'pick-card';
+      card.dataset.itemId = pick.id;
+
+      if (purchaseStatus) {
+        const badge = document.createElement('div');
+        badge.className = `purchase-badge ${purchaseStatus.status}`;
+        if (purchaseStatus.status === 'pending') badge.textContent = '⏳ Ordered';
+        else if (purchaseStatus.status === 'purchased') badge.textContent = '✓ Copped';
+        else if (purchaseStatus.status === 'failed') badge.textContent = '✗ Failed';
+        else if (purchaseStatus.status === 'skipped') badge.textContent = '→ Link to shop';
+        card.appendChild(badge);
+      }
+
+      card.innerHTML += `
+        <img src="${pick.image_url || ''}" alt="${pick.name}" loading="lazy" />
+        <div class="pick-card-body">
+          <div class="pick-name">${pick.name}</div>
+          <div class="pick-brand">${pick.brand}</div>
+          <div class="pick-price">$${pick.price_usd}</div>
+          <a href="${pick.url}" target="_blank" rel="noopener">Shop →</a>
+          ${pick.justification ? `<div class="pick-justification">"${pick.justification}"</div>` : ''}
+        </div>
+      `;
+      return card;
+    }
+
+    // ── Inline purchase section ───────────────────────────────────────────
+    function renderPurchaseSection(picks) {
+      purchaseList.innerHTML = '';
+      let total = 0;
+      picks.forEach(pick => {
+        if (!pick.amazon_asin) return;
+        total += pick.price_usd;
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${pick.name}</span><span>$${pick.price_usd}</span>`;
+        purchaseList.appendChild(li);
+      });
+      purchaseTotal.textContent = `Total: $${total.toFixed(2)}`;
+      purchaseSection.style.display = 'block';
+      purchaseConfirmBtn.disabled = false;
+      purchaseConfirmBtn.textContent = '✦ Yes, cop it all';
+    }
+
+    purchaseSkipBtn.addEventListener('click', () => {
+      purchaseSection.style.display = 'none';
+      setStatus('No purchase made — items are just picks for now 🛍');
+    });
+
+    purchaseConfirmBtn.addEventListener('click', async () => {
+      setStatus('Aura is placing your order… 🛒');
+      purchaseConfirmBtn.disabled = true;
+      purchaseConfirmBtn.textContent = 'Placing order…';
+
+      const form = new FormData();
+      if (audioBlob) form.append('audio', audioBlob, 'voice.webm');
+      if (photoBlob) form.append('image', photoBlob, 'photo.jpg');
+      if (knotConnected && knotUserId) form.append('knot_token', knotUserId);
+      form.append('execute_purchase', 'true');
+
+      try {
+        const res = await fetch('/chat', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        const data = await res.json();
+
+        // Update pick cards with purchase status
+        if (data.purchase_status) {
+          const statusByItemId = {};
+          data.purchase_status.forEach(s => { statusByItemId[s.item_id] = s; });
+
+          picksGrid.innerHTML = '';
+          data.picks.forEach(pick => {
+            const ps = statusByItemId[pick.id];
+            picksGrid.appendChild(buildPickCard(pick, ps));
+          });
+        }
+
+        purchaseSection.style.display = 'none';
+        const purchasedCount = (data.purchase_status || []).filter(s => s.status === 'pending').length;
+        setStatus(purchasedCount > 0
+          ? `Aura copped ${purchasedCount} item${purchasedCount > 1 ? 's' : ''} for you ✓`
+          : 'Order submitted — check your Amazon for confirmation ✓');
+      } catch (err) {
+        setStatus(`Purchase failed: ${err.message}`);
+        console.error(err);
+        purchaseConfirmBtn.disabled = false;
+        purchaseConfirmBtn.textContent = '✦ Yes, cop it all';
+      }
+    });
+
+    // ── Subscription banner ───────────────────────────────────────────────
+    function renderSubBanner(subscriptions) {
+      subList.innerHTML = '';
+      subscriptions.forEach(sub => {
+        const row = document.createElement('div');
+        row.className = 'sub-item';
+        const costStr = sub.monthly_cost_usd != null ? `$${sub.monthly_cost_usd}/mo` : '';
+        row.innerHTML = `
+          <span class="sub-name">${sub.name}</span>
+          <span class="sub-cost">${costStr}</span>
+          ${sub.is_cancellable
+            ? `<button class="btn-danger" data-sub-id="${sub.id}">Cancel</button>`
+            : `<span style="font-size:0.75rem;color:var(--mid)">Not cancellable</span>`
+          }
+        `;
+        subList.appendChild(row);
+      });
+
+      subBanner.style.display = 'block';
+
+      // Wire up cancel buttons
+      subList.querySelectorAll('[data-sub-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const subId = btn.dataset.subId;
+          btn.disabled = true;
+          btn.textContent = 'Cancelling…';
+          try {
+            const res = await fetch(`/cancel-subscription/${subId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`${res.status}`);
+            btn.closest('.sub-item').innerHTML = `<span style="color:var(--green);font-size:0.85rem">✓ Cancelled</span>`;
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Retry';
+            console.error('[cancel sub]', err);
+          }
+        });
+      });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+      function setStatus(msg) {
+        status.textContent = msg;
+      }
+    </script>
+  </body>
+</html>
